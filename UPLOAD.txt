@@ -1,0 +1,67 @@
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+import torchvision as tv
+import tkinter as tk 
+train_data = tv.datasets.MNIST(root= 'data', download= True, train= True, transform= tv.transforms.ToTensor())
+test_data = tv.datasets.MNIST(root= 'data', download= True, train= False, transform= tv.transforms.ToTensor())
+train_loader = DataLoader(train_data, batch_size=64, shuffle= True)
+test_loader = DataLoader(test_data, batch_size= 64, shuffle= False)
+wheight = torch.rand(10, 4)
+baises = torch.rand(4)
+class SimpleNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.model = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(784, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Linear(32, 10)
+        )
+
+    def forward(self, x):
+        return self.model(x)
+
+
+model = SimpleNN()
+loss_fn = nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+num_epochs = 15
+for epoch in range(num_epochs):
+    running_loss = 0.0
+    correct = 0
+    total = 0
+    for data, target in train_loader:
+        optimizer.zero_grad()
+        output = model(data)
+        loss = loss_fn(output, target)
+        running_loss += loss.item() * data.size(0)
+        correct += (output.argmax(dim=1) == target).sum().item()
+        total += target.size(0)
+        loss.backward()
+        optimizer.step()
+
+    epoch_loss = running_loss / total if total else 0.0
+    epoch_acc = 100.0 * correct / total if total else 0.0
+    print(
+        f"Epoch [{epoch+1:02d}/{num_epochs:02d}] "
+        f"| Train Loss: {epoch_loss:.4f} "
+        f"| Train Acc: {epoch_acc:.2f}%"
+    )
+
+model.eval()
+with torch.no_grad():
+    correct = 0
+    total = 0
+    for data, target in test_loader:
+        output = model(data)
+        pred = output.argmax(dim=1)
+        correct += (pred == target).sum().item()
+        total += target.size(0)
+    accuracy = correct / total if total else 0.0
+model.train()
+
